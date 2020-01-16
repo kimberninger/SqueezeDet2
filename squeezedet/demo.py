@@ -74,8 +74,32 @@ def main(_):
         anchor_boxes,
         len(anchor_shapes))
 
+    # from squeezedet.data import kitti
+    # data = kitti(classes, image_width, image_height, anchor_boxes) \
+    #     .padded_batch(20, padding_values=({
+    #         'image': 0.,
+    #         'anchor_ids': -1,
+    #     }, {
+    #         'labels': 0.,
+    #         'bboxes': 0.,
+    #         'deltas': 0.
+    #     }), padded_shapes=({
+    #         'image': [image_height, image_width, 3],
+    #         'anchor_ids': [None]
+    #     }, {
+    #         'labels': [None, len(classes)],
+    #         'bboxes': [None, 4],
+    #         'deltas': [None, 4]
+    #     }))
+
+    # from metrics import AveragePrecision, AverageRecall
+    # det.compile(loss='mse', metrics=[AveragePrecision(), AverageRecall()])
+
+    # print(det.metrics_names)
+    # det.evaluate(data.take(10))
+
     data = tf.data.Dataset.list_files(FLAGS.input_path) \
-        .map(load_image).batch(1)
+        .map(load_image).batch(20)
 
     for d in data:
         _, _, bboxes = det.predict(d)
