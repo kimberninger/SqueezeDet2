@@ -1,18 +1,18 @@
 import tensorflow as tf
 import tensorflow.keras as tfk
 
-from utils import normalize_bboxes
+from squeezedet.utils import normalize_bboxes
 
 
 class ImagePlotter(tfk.callbacks.Callback):
-    def __init__(self, detector, filename, image_width, image_height, bgr_means, box_color=[(255.0, 0.0, 0.0, 1.0)]):
+    def __init__(self, detector, filename,
+                 image_width, image_height, bgr_means,
+                 box_color=[(255.0, 0.0, 0.0, 1.0)]):
         super(ImagePlotter, self).__init__()
         self.detector = detector
 
-        self.image = tf.expand_dims(
-            tf.cast(tf.io.decode_image(
-                tf.io.read_file(filename)),
-                dtype=tf.float32), 0)
+        self.image = tf.cast(tf.io.decode_image(
+            tf.io.read_file(filename)), dtype=tf.float32)[tf.newaxis]
 
         self.input_image = tf.image.resize(
             self.image[..., ::-1] - bgr_means,

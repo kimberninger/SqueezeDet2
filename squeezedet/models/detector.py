@@ -2,8 +2,8 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
-from layers import GatherAnchors, BoxInterpretation, BoxFilter
-from losses import ClassLoss, ConfidenceLoss, BboxLoss
+from squeezedet.layers import GatherAnchors, BoxInterpretation, BoxFilter
+from squeezedet.losses import ClassLoss, ConfidenceLoss, BboxLoss
 
 
 def detector(net,
@@ -49,7 +49,7 @@ def detector(net,
     det_class, det_probs, det_boxes = BoxInterpretation(
         anchor_boxes, image_width, image_height)((labels, confidence, deltas))
 
-    bboxes = tf.concat([tf.expand_dims(confidence, -1), det_boxes], axis=-1)
+    bboxes = tf.concat([confidence[..., tf.newaxis], det_boxes], axis=-1)
 
     model = tfk.Model(
         inputs=[image_input, anchor_ids],

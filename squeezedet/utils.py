@@ -1,7 +1,9 @@
 import tensorflow as tf
 
 
-def normalize_bboxes(b, image_width=1.0, image_height=1.0, invert_y=False, switch_xy=False):
+def normalize_bboxes(b,
+                     image_width=1.0, image_height=1.0,
+                     invert_y=False, switch_xy=False):
     w = tf.cast(image_width, dtype=tf.float32)
     h = tf.cast(image_height, dtype=tf.float32)
     return tf.stack([
@@ -12,7 +14,9 @@ def normalize_bboxes(b, image_width=1.0, image_height=1.0, invert_y=False, switc
     ], -1)
 
 
-def denormalize_bboxes(b, image_width=1.0, image_height=1.0, invert_y=False, switch_xy=False):
+def denormalize_bboxes(b,
+                       image_width=1.0, image_height=1.0,
+                       invert_y=False, switch_xy=False):
     w = tf.cast(image_width, dtype=tf.float32)
     h = tf.cast(image_height, dtype=tf.float32)
     return tf.stack([
@@ -63,7 +67,7 @@ def get_anchors(shapes, num_x, num_y, width, height):
     center_y = height * tf.linspace(0., 1., num_y+2)[1:-1]
     x, y, width = tf.meshgrid(center_x, center_y, anchor_shapes[:, 0])
     _, _, height = tf.meshgrid(center_x, center_y, anchor_shapes[:, 1])
-    return tf.reshape(tf.stack([x, y, width, height], axis=3), (-1, 4))
+    return tf.reshape(tf.stack([x, y, width, height], axis=3), shape=(-1, 4))
 
 
 def safe_exp(w, t):

@@ -3,7 +3,7 @@ import tensorflow_datasets as tfds
 
 from absl import logging
 
-from utils import iou, prepare_image
+from squeezedet.utils import iou, prepare_image
 
 
 def kitti(classes,
@@ -35,7 +35,7 @@ def kitti(classes,
     ])
 
     all_classes = tf.strings.lower(info.features['objects']['type'].names)
-    m = tf.expand_dims(all_classes, -1) == tf.strings.lower(classes)
+    m = all_classes[..., tf.newaxis] == tf.strings.lower(classes)
     relevant_labels = tf.math.reduce_any(m, -1)
     label_indices = tf.math.reduce_sum(
         tf.cast(m, dtype=tf.int32) * tf.range(len(classes)), -1)
@@ -60,10 +60,10 @@ def kitti(classes,
             features['objects']['bbox'][mask] +
             tf.stack([-1 - 1/orig_h, 0, -1, 1/orig_w]))
 
-        ious = iou(tf.expand_dims(bboxes, 1), tf.expand_dims(anchors, 0))
+        ious = iou(bboxes[:, tf.newaxis], anchors[tf.newaxis])
 
         dists = tf.math.reduce_sum(tf.math.square(
-            tf.expand_dims(bboxes, 1) - tf.expand_dims(anchors, 0)), -1)
+            bboxes[:, tf.newaxis] - anchors[tf.newaxis]), -1)
 
         overlap_ids = tf.argsort(ious, direction='DESCENDING')
 
@@ -82,9 +82,9 @@ def kitti(classes,
 
         anchor_ids = tf.zeros(tf.shape(candidates)[0], dtype=tf.int32)
         for i in range(tf.shape(candidates)[0]):
-            available = tf.reduce_all(
-                tf.expand_dims(candidates[i], -1) !=
-                tf.expand_dims(anchor_ids[:i], 0), -1)
+            available = tf.math.reduce_all(
+                candidates[i][..., tf.newaxis] !=
+                anchor_ids[:i][tf.newaxis], -1)
             next_index = candidates[i][available][0]
             anchor_ids = tf.tensor_scatter_nd_add(
                 anchor_ids, [[i]], [next_index])

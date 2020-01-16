@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras as tfk
-from utils import iou
+
+from squeezedet.utils import iou
 
 
 class ClassLoss(tfk.losses.Loss):

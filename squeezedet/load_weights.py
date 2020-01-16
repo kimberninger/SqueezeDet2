@@ -4,7 +4,7 @@ import tensorflow.keras.layers as tfkl
 from layers import Fire
 from absl import app, flags
 
-from models import squeezedet
+from squeezedet.models import squeezedet
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
@@ -29,14 +29,18 @@ def load_weights(model, checkpoint_file):
         if layer.name.startswith('conv'):
             if layer.name in weights:
                 print(layer.name)
-                kernel = tf.transpose(weights[layer.name][0], (2, 3, 1, 0))
+                kernel = tf.transpose(
+                    weights[layer.name][0],
+                    perm=(2, 3, 1, 0))
                 bias = weights[layer.name][1]
                 layer.set_weights((kernel, bias))
         if layer.name.startswith('fire'):
             for layer2 in [layer.sq1x1, layer.ex1x1, layer.ex3x3]:
                 if layer2.name in weights:
                     print(layer2.name)
-                    kernel = tf.transpose(weights[layer2.name][0], (2, 3, 1, 0))
+                    kernel = tf.transpose(
+                        weights[layer2.name][0],
+                        perm=(2, 3, 1, 0))
                     bias = weights[layer2.name][1]
                     layer2.set_weights((kernel, bias))
 
@@ -83,9 +87,13 @@ def main(_):
     model.save('models/squeezedet_trained.h5')
 
     model1 = tfk.models.load_model(
-        'models/squeezedet_pretrained.h5', custom_objects={'Fire': Fire}, compile=False)
+        'models/squeezedet_pretrained.h5',
+        custom_objects={'Fire': Fire},
+        compile=False)
     model2 = tfk.models.load_model(
-        'models/squeezedet_trained.h5', custom_objects={'Fire': Fire}, compile=False)
+        'models/squeezedet_trained.h5',
+        custom_objects={'Fire': Fire},
+        compile=False)
 
     x = tf.random.normal((1, 384, 1248, 3))
     print(model1.predict(x))

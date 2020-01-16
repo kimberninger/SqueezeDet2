@@ -1,9 +1,9 @@
 import tensorflow as tf
 from absl import app, flags
 
-from models import detector
-from layers import Fire
-from utils import get_anchors, prepare_image, normalize_bboxes
+from squeezedet.models import detector
+from squeezedet.layers import Fire
+from squeezedet.utils import get_anchors, prepare_image, normalize_bboxes
 
 FLAGS = flags.FLAGS
 

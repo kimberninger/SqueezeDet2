@@ -79,15 +79,17 @@ class KittiReader:
 
         labels = tf.cast(labels[mask], dtype=tf.int32)
 
-        bboxes = tf.reshape(tf.reshape(bboxes[mask], (-1, 2, 2)) *
-                            tf.stack([[[x_scale, y_scale]]]), (-1, 4))
+        bboxes = tf.reshape(
+            tf.reshape(bboxes[mask], shape=(-1, 2, 2)) *
+            tf.stack([[[x_scale, y_scale]]]),
+            shape=(-1, 4))
 
         anchor_boxes = tf.cast(self.anchor_box, dtype=tf.float32)
 
         ious = batch_iou(bboxes, anchor_boxes)
 
         dists = tf.math.reduce_sum(tf.math.square(
-            tf.expand_dims(bboxes, 1) - tf.expand_dims(anchors, 0)), -1)
+            bboxes[:, tf.newaxis] - self.anchor_box[tf.newaxis]), -1)
 
         overlap_ids = tf.argsort(ious, direction='DESCENDING')
         dist_ids = tf.argsort(dists)

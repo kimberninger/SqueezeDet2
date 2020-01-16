@@ -1,7 +1,7 @@
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
-from layers import Fire
+from squeezedet.layers import Fire
 
 
 def squeezedet(num_classes, num_anchor_shapes, l2=0.0001, dropout_rate=0.5):

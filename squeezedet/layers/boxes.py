@@ -1,7 +1,9 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 
-from utils import bbox_transform, bbox_transform_inv, normalize_bboxes, denormalize_bboxes, safe_exp
+from squeezedet.utils import (
+    bbox_transform, bbox_transform_inv,
+    normalize_bboxes, denormalize_bboxes, safe_exp)
 
 
 class GatherAnchors(tfkl.Layer):
@@ -41,7 +43,9 @@ class ClipBoxes(tfkl.Layer):
 
 
 class BoxInterpretation(tfkl.Layer):
-    def __init__(self, anchors, image_width, image_height, exp_thresh=1.0, **kwargs):
+    def __init__(self, anchors,
+                 image_width, image_height,
+                 exp_thresh=1.0, **kwargs):
         super(BoxInterpretation, self).__init__(**kwargs)
         self.anchors = anchors
         self.exp_thresh = exp_thresh
@@ -55,7 +59,7 @@ class BoxInterpretation(tfkl.Layer):
             self.anchors[:, 2:] * safe_exp(deltas[:, :, 2:], self.exp_thresh)
         ], axis=-1))
 
-        probs = labels * tf.expand_dims(confidence, -1)
+        probs = labels * confidence[..., tf.newaxis]
 
         det_class = tf.math.argmax(probs, -1)
         det_probs = tf.math.reduce_max(probs, -1)
@@ -68,7 +72,8 @@ class BoxInterpretation(tfkl.Layer):
 
 
 class BoxFilter(tfkl.Layer):
-    def __init__(self, num_classes, top_n_detection, prob_thresh, nms_thresh, **kwargs):
+    def __init__(self, num_classes,
+                 top_n_detection, prob_thresh, nms_thresh, **kwargs):
         super(BoxFilter, self).__init__(**kwargs)
         self.num_classes = num_classes
         self.top_n_detection = top_n_detection
@@ -86,21 +91,14 @@ class BoxFilter(tfkl.Layer):
         boxes = normalize_bboxes(boxes)
 
         scores = tf.gather(det_probs, order, batch_dims=1)
-        one_hot = tf.one_hot(
+        onehot = tf.one_hot(
             tf.gather(det_class, order, batch_dims=1),
             depth=self.num_classes,
             on_value=True,
             off_value=False)
 
-        boxes = tf.where(
-            tf.expand_dims(one_hot, -1),
-            tf.expand_dims(boxes, -2),
-            0)
-
-        scores = tf.where(
-            one_hot,
-            tf.expand_dims(scores, -1),
-            0)
+        boxes = tf.where(onehot[..., tf.newaxis], boxes[..., tf.newaxis, :], 0)
+        scores = tf.where(onehot, scores[..., tf.newaxis], 0)
 
         result = tf.image.combined_non_max_suppression(
             boxes, scores,
@@ -111,7 +109,8 @@ class BoxFilter(tfkl.Layer):
             clip_boxes=False,
             pad_per_class=True)
 
-        valid_mask = tf.expand_dims(tf.range(self.top_n_detection), 0) < tf.expand_dims(result.valid_detections, -1)
+        valid = result.valid_detections[..., tf.newaxis]
+        valid_mask = tf.range(self.top_n_detection)[tf.newaxis] < valid
 
         boxes = denormalize_bboxes(result.nmsed_boxes)
 

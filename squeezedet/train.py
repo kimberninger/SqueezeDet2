@@ -1,10 +1,10 @@
 import tensorflow as tf
 from absl import app, flags  # , logging
 
-from data import kitti
-from models import squeezeDet
-from callbacks import ImagePlotter
-from utils import get_anchors
+from squeezedet.data import kitti
+from squeezedet.models import squeezeDet
+from squeezedet.callbacks import ImagePlotter
+from squeezedet.utils import get_anchors
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('epochs', 1000000,
