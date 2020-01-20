@@ -13,7 +13,7 @@ class AveragePrecision(tfk.metrics.Metric):
             aggregation=tf.VariableAggregation.MEAN)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        self.precision.assign_add(tf.reduce_sum(y_true))
+        self.precision.assign_add(tf.math.reduce_sum(y_true))
 
     def result(self):
         return self.precision
@@ -28,7 +28,7 @@ class AverageRecall(tfk.metrics.Metric):
             aggregation=tf.VariableAggregation.MEAN)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        self.recall.assign_add(tf.reduce_sum(y_true))
+        self.recall.assign_add(tf.math.reduce_sum(y_true))
 
     def result(self):
         return self.recall

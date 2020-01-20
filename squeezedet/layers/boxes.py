@@ -61,8 +61,8 @@ class BoxInterpretation(tfkl.Layer):
 
         probs = labels * confidence[..., tf.newaxis]
 
-        det_class = tf.math.argmax(probs, -1)
-        det_probs = tf.math.reduce_max(probs, -1)
+        det_class = tf.math.argmax(probs, axis=-1)
+        det_probs = tf.math.reduce_max(probs, axis=-1)
 
         return det_class, det_probs, det_boxes
 

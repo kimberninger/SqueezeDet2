@@ -34,9 +34,9 @@ def kitti(classes,
 
     all_classes = tf.strings.lower(info.features['objects']['type'].names)
     m = all_classes[..., tf.newaxis] == tf.strings.lower(classes)
-    relevant_labels = tf.math.reduce_any(m, -1)
+    relevant_labels = tf.math.reduce_any(m, axis=-1)
     label_indices = tf.math.reduce_sum(
-        tf.cast(m, dtype=tf.int32) * tf.range(len(classes)), -1)
+        tf.cast(m, dtype=tf.int32) * tf.range(len(classes)), axis=-1)
 
     def transform(features):
         # TODO Add data augmentation.
@@ -61,7 +61,7 @@ def kitti(classes,
         ious = iou(bboxes[:, tf.newaxis], anchors[tf.newaxis])
 
         dists = tf.math.reduce_sum(tf.math.square(
-            bboxes[:, tf.newaxis] - anchors[tf.newaxis]), -1)
+            bboxes[:, tf.newaxis] - anchors[tf.newaxis]), axis=-1)
 
         candidates = tf.argsort(
             tf.where(ious > 0, -ious, dists))
@@ -70,7 +70,7 @@ def kitti(classes,
         for i in range(tf.shape(candidates)[0]):
             available = tf.math.reduce_all(
                 candidates[i][..., tf.newaxis] !=
-                anchor_ids[:i][tf.newaxis], -1)
+                anchor_ids[:i][tf.newaxis], axis=-1)
             next_index = candidates[i][available][0]
             anchor_ids = tf.tensor_scatter_nd_add(
                 anchor_ids, [[i]], [next_index])

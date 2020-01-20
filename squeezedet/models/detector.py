@@ -59,17 +59,17 @@ def detector(net,
             GatherAnchors(name='deltas')((deltas, anchor_ids))
         ])
 
-    penalty = tf.math.reduce_sum(tf.math.square(confidence), -1) - \
+    penalty = tf.math.reduce_sum(tf.math.square(confidence), axis=-1) - \
         tf.math.reduce_sum(tf.math.square(
             tf.where(anchor_ids >= 0,
                      tf.gather(confidence,
                                tf.maximum(0, anchor_ids),
                                batch_dims=1),
                      0.0)),
-            -1)
+            axis=-1)
 
     normalizer = len(anchor_boxes) - tf.math.reduce_sum(
-        tf.cast(anchor_ids >= 0, dtype=tf.float32), -1)
+        tf.cast(anchor_ids >= 0, dtype=tf.float32), axis=-1)
 
     model.add_loss(
         loss_coef_conf * loss_coef_conf_neg *

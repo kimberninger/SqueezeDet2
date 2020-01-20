@@ -16,7 +16,7 @@ class ClassLoss(tfk.losses.Loss):
 
         diff = tf.math.reduce_sum(
             y_true * (-tf.math.log(y_pred + self.epsilon)) +
-            (1 - y_true) * (-tf.math.log(1 - y_pred + self.epsilon)), -1)
+            (1 - y_true) * (-tf.math.log(1 - y_pred + self.epsilon)), axis=-1)
 
         diff = tf.nn.softmax_cross_entropy_with_logits(y_true, y_pred)
 
@@ -50,6 +50,6 @@ class BboxLoss(tfk.losses.Loss):
         num_objects = tf.math.count_nonzero(
             y_pred._keras_mask, dtype=tf.float32)
 
-        diff = tf.math.reduce_sum(tf.math.square(y_true - y_pred), -1)
+        diff = tf.math.reduce_sum(tf.math.square(y_true - y_pred), axis=-1)
 
         return diff / num_objects
