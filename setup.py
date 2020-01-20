@@ -9,6 +9,6 @@ setup(
     python_requires='>=3.6',
     packages=find_packages(),
     package_data={
-        '': ['*.h5'],
+        'squeezedet': ['*.h5'],
     }
 )
