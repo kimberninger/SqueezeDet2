@@ -9,6 +9,6 @@ setup(
     python_requires='>=3.6',
     packages=find_packages(),
     package_data={
-        'squeezedet.pretrained': ['*.h5'],
+        'squeezedet.models.pretrained': ['*.h5'],
     }
 )

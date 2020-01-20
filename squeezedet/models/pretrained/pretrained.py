@@ -4,7 +4,9 @@ from squeezedet.layers import Fire
 
 
 def squeezedet_pretrained():
-    filename = resource_filename('squeezedet.pretrained', 'squeezedet_pretrained.h5')
+    filename = resource_filename(
+        'squeezedet.models.pretrained',
+        'squeezedet_pretrained.h5')
     return tfk.models.load_model(
         filename,
         custom_objects={'Fire': Fire},
