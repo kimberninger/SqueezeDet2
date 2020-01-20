@@ -1,8 +1,6 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-from absl import logging
-
 from squeezedet.utils import iou, prepare_image
 
 
@@ -65,20 +63,8 @@ def kitti(classes,
         dists = tf.math.reduce_sum(tf.math.square(
             bboxes[:, tf.newaxis] - anchors[tf.newaxis]), -1)
 
-        overlap_ids = tf.argsort(ious, direction='DESCENDING')
-
-        dist_ids = tf.argsort(dists)
-
-        # TODO Suppresses warning due to a bug in TensorFlow. This will be
-        # fixed in the upcoming release
-        logging.set_verbosity(logging.ERROR)
-        candidates = tf.ragged.boolean_mask(
-            tf.concat([overlap_ids, dist_ids], 1),
-            tf.concat([tf.sort(ious, direction='DESCENDING'),
-                       tf.sort(dists, direction='DESCENDING')], 1) > 0)
-        logging.set_verbosity(logging.INFO)
-
-        candidates = candidates.to_tensor()
+        candidates = tf.argsort(
+            tf.where(ious > 0, -ious, dists))
 
         anchor_ids = tf.zeros(tf.shape(candidates)[0], dtype=tf.int32)
         for i in range(tf.shape(candidates)[0]):
