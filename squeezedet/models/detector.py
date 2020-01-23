@@ -11,8 +11,9 @@ def detector(net,
              image_height,
              num_channels,
              num_classes,
-             anchor_boxes,
-             num_anchor_shapes,
+             anchor_shapes,
+             anchor_grid_width,
+             anchor_grid_height,
              loss_coef_bbox=5.0,
              loss_coef_conf=1.0,
              loss_coef_conf_pos=75.0,
@@ -32,7 +33,7 @@ def detector(net,
                             shape=(image_height, image_width, num_channels))
     anchor_ids = tfk.Input(name='anchor_ids', shape=(None,), dtype=tf.int32)
 
-    num_output = num_anchor_shapes * tf.constant([num_classes, 1, 4])
+    num_output = len(anchor_shapes) * tf.constant([num_classes, 1, 4])
 
     preds = net(image_input)
 
@@ -47,7 +48,11 @@ def detector(net,
     deltas = tfkl.Reshape((-1, 4))(deltas)
 
     det_class, det_probs, det_boxes = BoxInterpretation(
-        anchor_boxes, image_width, image_height)((labels, confidence, deltas))
+        anchor_shapes,
+        anchor_grid_width,
+        anchor_grid_height,
+        image_width,
+        image_height)((labels, confidence, deltas))
 
     bboxes = tf.concat([confidence[..., tf.newaxis], det_boxes], axis=-1)
 
@@ -68,7 +73,10 @@ def detector(net,
                      0.0)),
             axis=-1)
 
-    normalizer = len(anchor_boxes) - tf.math.reduce_sum(
+    num_anchor_boxes = anchor_grid_width * anchor_grid_height * len(
+        anchor_shapes)
+
+    normalizer = num_anchor_boxes - tf.math.reduce_sum(
         tf.cast(anchor_ids >= 0, dtype=tf.float32), axis=-1)
 
     model.add_loss(

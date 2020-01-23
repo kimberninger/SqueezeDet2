@@ -1,54 +1,38 @@
 import tensorflow as tf
 
 
-def normalize_bboxes(b,
-                     image_width=1.0, image_height=1.0,
-                     invert_y=False, switch_xy=False):
+def normalize_bboxes(b, image_width, image_height,
+                     invert_x=False, invert_y=False, switch_xy=True):
     w = tf.cast(image_width, dtype=tf.float32)
     h = tf.cast(image_height, dtype=tf.float32)
+    i = 1 if invert_x else 0
+    j = 1 if invert_y else 0
+    k = 1 if switch_xy else 0
+    if switch_xy:
+        w, h, i, j = h, w, j, i
     return tf.stack([
-        (b[..., 1] - b[..., 3] / 2) / h,
-        (b[..., 0] - b[..., 2] / 2) / w,
-        (b[..., 1] + b[..., 3] / 2) / h,
-        (b[..., 0] + b[..., 2] / 2) / w
-    ], -1)
+        i + ((1-2*i) * b[..., 0+k] - b[..., 2+k] / 2) / w,
+        j + ((1-2*j) * b[..., 1-k] - b[..., 3-k] / 2) / h,
+        i + ((1-2*i) * b[..., 0+k] + b[..., 2+k] / 2) / w,
+        j + ((1-2*j) * b[..., 1-k] + b[..., 3-k] / 2) / h
+    ], axis=-1)
 
 
-def denormalize_bboxes(b,
-                       image_width=1.0, image_height=1.0,
-                       invert_y=False, switch_xy=False):
+def denormalize_bboxes(b, image_width, image_height,
+                       invert_x=False, invert_y=False, switch_xy=True):
     w = tf.cast(image_width, dtype=tf.float32)
     h = tf.cast(image_height, dtype=tf.float32)
+    i = 1 if invert_x else 0
+    j = 1 if invert_y else 0
+    k = 1 if switch_xy else 0
+    if switch_xy:
+        i, j = j, i
     return tf.stack([
-        w * (b[..., 1] + b[..., 3]) / 2,
-        h * ((b[..., 2] + b[..., 0]) / 2),
-        w * (b[..., 3] - b[..., 1]),
-        h * (b[..., 2] - b[..., 0])
-    ], -1)
-
-
-def bbox_transform(bbox):
-    a = tf.constant([
-        [1, 0, -0.5, 0],
-        [0, 1, 0, -0.5],
-        [1, 0, 0.5, 0],
-        [0, 1, 0, 0.5]])
-
-    b = tf.constant([0., 0, 1, 1])
-
-    return tf.linalg.matvec(a, bbox) - b
-
-
-def bbox_transform_inv(bbox):
-    a = tf.constant([
-        [0.5, 0, 0.5, 0],
-        [0, 0.5, 0, 0.5],
-        [-1, 0, 1, 0],
-        [0, -1, 0, 1]])
-
-    b = tf.constant([0.5, 0.5, 1, 1])
-
-    return tf.linalg.matvec(a, bbox) + b
+        w * (j + (1-2*j) * (b[..., 2+k] + b[..., 0+k]) / 2),
+        h * (i + (1-2*i) * (b[..., 3-k] + b[..., 1-k]) / 2),
+        w * (b[..., 2+k] - b[..., 0+k]),
+        h * (b[..., 3-k] - b[..., 1-k])
+    ], axis=-1)
 
 
 def iou(b1, b2, epsilon=0.0):
@@ -77,13 +61,24 @@ def safe_exp(w, t):
         tf.math.exp(w))
 
 
-def prepare_image(image, width, height, bgr_means):
+def prepare_image(image,
+                  width=None,
+                  height=None,
+                  means=None,
+                  reverse=True):
     """Prepares an image to be fed into the detector network."""
-    im = tf.cast(image, dtype=tf.float32)[..., ::-1] - bgr_means
-    return tf.image.resize(im, size=(height, width))
+    im = tf.cast(image, dtype=tf.float32)
 
+    if reverse:
+        im = im[..., ::-1]
 
-def draw_bboxes(images, bboxes):
-    height, width = tf.shape(images)[1:3]
-    bboxes = normalize_bboxes(bboxes, width, height)
-    print(bboxes)
+    if means is not None:
+        im -= means
+
+    w = tf.shape(im)[-2] if width is None else width
+    h = tf.shape(im)[-3] if height is None else height
+
+    if width is None and height is None:
+        return im
+
+    return tf.image.resize(im, size=(h, w))

@@ -1,5 +1,7 @@
 import tensorflow.keras as tfk
+
 from pkg_resources import resource_filename
+
 from squeezedet.layers import Fire
 
 

@@ -1,9 +1,8 @@
 import tensorflow as tf
 from absl import app, flags  # , logging
 
-from squeezedet.data import kitti
+from squeezedet.data import kitti, padded_batch
 from squeezedet.models import squeezeDet
-from squeezedet.callbacks import ImagePlotter
 from squeezedet.utils import get_anchors
 
 FLAGS = flags.FLAGS
@@ -68,27 +67,14 @@ def main(_):
     anchor_shapes = [[36, 37], [366, 174], [115, 59],
                      [162, 87], [38, 90], [258, 173],
                      [224, 108], [78, 170], [72, 43]]
-    anchor_boxes = get_anchors(anchor_shapes, num_anchors_x, num_anchors_y,
-                               image_width, image_height)
+    anchor_boxes = get_anchors(
+        anchor_shapes, num_anchors_x, num_anchors_y, image_width, image_height)
 
     classes = ['car', 'pedestrian', 'cyclist']
 
-    data = kitti(classes, image_width, image_height, anchor_boxes) \
-        .padded_batch(FLAGS.batch_size, padding_values=({
-            'image': 0.,
-            'anchor_ids': -1,
-        }, {
-            'labels': 0.,
-            'bboxes': 0.,
-            'deltas': 0.
-        }), padded_shapes=({
-            'image': [image_height, image_width, 3],
-            'anchor_ids': [None]
-        }, {
-            'labels': [None, len(classes)],
-            'bboxes': [None, 4],
-            'deltas': [None, 4]
-        }))
+    data = padded_batch(
+        kitti(anchor_boxes, classes, image_width, image_height),
+        FLAGS.batch_size)
 
     model, detector = squeezeDet(
         image_width=image_width,
@@ -104,14 +90,9 @@ def main(_):
         loss_coef_class=1.0)
 
     callbacks = [
-        # tf.keras.callbacks.ModelCheckpoint(filepath=FLAGS.checkpoint_dir),
-        tf.keras.callbacks.TensorBoard(log_dir=FLAGS.tensorboard_dir),
-        ImagePlotter(detector, '/Users/kimberninger/TensorFlowTest/sample.png',
-                     image_width, image_height, (103.939, 116.779, 123.68))
+        tf.keras.callbacks.ModelCheckpoint(filepath=FLAGS.checkpoint_dir),
+        tf.keras.callbacks.TensorBoard(log_dir=FLAGS.tensorboard_dir)
     ]
-
-    for inputs, outputs in data:
-        print(inputs['anchor_ids'])
 
     model.fit(
         data,

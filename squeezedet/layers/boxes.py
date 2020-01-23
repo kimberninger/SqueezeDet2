@@ -1,9 +1,8 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 
-from squeezedet.utils import (
-    bbox_transform, bbox_transform_inv,
-    normalize_bboxes, denormalize_bboxes, safe_exp)
+from squeezedet.utils import safe_exp, get_anchors
+from squeezedet.utils import normalize_bboxes, denormalize_bboxes
 
 
 class GatherAnchors(tfkl.Layer):
@@ -28,28 +27,45 @@ class GatherAnchors(tfkl.Layer):
 class ClipBoxes(tfkl.Layer):
     def __init__(self, image_width, image_height, **kwargs):
         super(ClipBoxes, self).__init__(**kwargs)
-        self.clip = tf.tile(tf.constant([
-            image_width - 1.0,
-            image_height - 1.0
-        ]), (2,))
+        self.image_width = image_width
+        self.image_height = image_height
 
     def call(self, inputs):
-        return bbox_transform_inv(
-            tf.clip_by_value(bbox_transform(inputs), 0.0, self.clip))
+        return denormalize_bboxes(
+            tf.clip_by_value(
+                normalize_bboxes(inputs, self.image_width, self.image_height),
+                0., 1.),
+            self.image_width, self.image_height)
 
     def get_config(self):
         config = super(ClipBoxes, self).get_config()
+        config.update({
+            'image_width': self.image_width,
+            'image_height': self.image_height
+        })
         return config
 
 
 class BoxInterpretation(tfkl.Layer):
-    def __init__(self, anchors,
+    def __init__(self, anchor_shapes, anchor_grid_width, anchor_grid_height,
                  image_width, image_height,
                  exp_thresh=1.0, **kwargs):
         super(BoxInterpretation, self).__init__(**kwargs)
-        self.anchors = anchors
+        self.anchor_shapes = anchor_shapes
+        self.anchor_grid_width = anchor_grid_width
+        self.anchor_grid_height = anchor_grid_height
         self.exp_thresh = exp_thresh
-        self.clip = ClipBoxes(image_width, image_height)
+        self.image_width = image_width
+        self.image_height = image_height
+
+    def build(self, input_shape):
+        self.clip = ClipBoxes(self.image_width, self.image_height)
+        self.anchors = get_anchors(
+            self.anchor_shapes,
+            self.anchor_grid_width,
+            self.anchor_grid_height,
+            self.image_width,
+            self.image_height)
 
     def call(self, inputs):
         labels, confidence, deltas = inputs
@@ -68,6 +84,14 @@ class BoxInterpretation(tfkl.Layer):
 
     def get_config(self):
         config = super(BoxInterpretation, self).get_config()
+        config.update({
+            'anchor_shapes': self.anchor_shapes,
+            'anchor_grid_width': self.anchor_grid_width,
+            'anchor_grid_height': self.anchor_grid_height,
+            'exp_thresh': self.exp_thresh,
+            'image_width': self.image_width,
+            'image_height': self.image_height
+        })
         return config
 
 
@@ -88,7 +112,7 @@ class BoxFilter(tfkl.Layer):
 
         boxes = tf.gather(det_boxes, order, batch_dims=1)
 
-        boxes = normalize_bboxes(boxes)
+        boxes = normalize_bboxes(boxes, 1.0, 1.0)
 
         scores = tf.gather(det_probs, order, batch_dims=1)
         onehot = tf.one_hot(
@@ -112,10 +136,20 @@ class BoxFilter(tfkl.Layer):
         valid = result.valid_detections[..., tf.newaxis]
         valid_mask = tf.range(self.top_n_detection)[tf.newaxis] < valid
 
-        boxes = denormalize_bboxes(result.nmsed_boxes)
+        boxes = denormalize_bboxes(result.nmsed_boxes, 1.0, 1.0)
 
         final_labels = tf.ragged.boolean_mask(result.nmsed_boxes, valid_mask)
         final_probs = tf.ragged.boolean_mask(result.nmsed_scores, valid_mask)
         final_boxes = tf.ragged.boolean_mask(boxes, valid_mask)
 
         return tf.cast(final_labels, dtype=tf.int32), final_probs, final_boxes
+
+    def get_config(self):
+        config = super(BoxFilter, self).get_config()
+        config.update({
+            'num_classes': self.num_classes,
+            'top_n_detection': self.top_n_detection,
+            'prob_thresh': self.prob_thresh,
+            'nms_thresh': self.nms_thresh
+        })
+        return config

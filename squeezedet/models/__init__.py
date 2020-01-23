@@ -3,5 +3,6 @@ from .detector import detector
 
 __all__ = [
     'squeezedet',
-    'detector'
+    'detector',
+    'pretrained'
 ]
