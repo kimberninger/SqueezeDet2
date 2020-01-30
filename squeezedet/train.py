@@ -2,21 +2,10 @@ import tensorflow as tf
 from absl import app, flags  # , logging
 
 from squeezedet.data import kitti, padded_batch
-from squeezedet.models import squeezeDet
-from squeezedet.utils import get_anchors
+from squeezedet.models import detector
+from squeezedet.models.pretrained import squeezedet_pretrained
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('epochs', 1000000,
-                     'Number of epochs to train.')
-flags.DEFINE_string('tensorboard_dir', 'logs',
-                    'Where to write the TensorBoard logs.')
-flags.DEFINE_string('checkpoint_dir', 'checkpoints',
-                    'Where to write the model checkpoints.')
-flags.DEFINE_string('data_path', 'KITTI/training',
-                    'Where the data is located.')
-flags.DEFINE_integer('batch_size', '20',
-                     'The batch size to apply to the data.')
-
 flags.DEFINE_string(
     'dataset',
     'KITTI',
@@ -67,27 +56,25 @@ def main(_):
     anchor_shapes = [[36, 37], [366, 174], [115, 59],
                      [162, 87], [38, 90], [258, 173],
                      [224, 108], [78, 170], [72, 43]]
-    anchor_boxes = get_anchors(
-        anchor_shapes, num_anchors_x, num_anchors_y, image_width, image_height)
 
     classes = ['car', 'pedestrian', 'cyclist']
 
     data = padded_batch(
-        kitti(anchor_boxes, classes, image_width, image_height),
+        kitti(anchor_shapes, num_anchors_x, num_anchors_y,
+              classes, image_width, image_height),
         FLAGS.batch_size)
 
-    model, detector = squeezeDet(
+    net = squeezedet_pretrained()
+
+    model, _ = detector(
+        net=net,
         image_width=image_width,
         image_height=image_height,
         num_channels=3,
         num_classes=len(classes),
-        anchor_boxes=anchor_boxes,
-        num_anchor_shapes=len(anchor_shapes),
-        loss_coef_bbox=1.0,
-        loss_coef_conf=1.0,
-        loss_coef_conf_pos=1.0,
-        loss_coef_conf_neg=1.0,
-        loss_coef_class=1.0)
+        anchor_shapes=anchor_shapes,
+        anchor_grid_width=num_anchors_x,
+        anchor_grid_height=num_anchors_y)
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(filepath=FLAGS.checkpoint_dir),
