@@ -138,9 +138,12 @@ class BoxFilter(tfkl.Layer):
 
         boxes = denormalize_bboxes(result.nmsed_boxes, 1.0, 1.0)
 
+        from absl import logging
+        logging.set_verbosity(logging.ERROR)
         final_labels = tf.ragged.boolean_mask(result.nmsed_boxes, valid_mask)
         final_probs = tf.ragged.boolean_mask(result.nmsed_scores, valid_mask)
         final_boxes = tf.ragged.boolean_mask(boxes, valid_mask)
+        logging.set_verbosity(logging.INFO)
 
         return tf.cast(final_labels, dtype=tf.int32), final_probs, final_boxes
 

@@ -5,7 +5,9 @@ from squeezedet.utils import denormalize_bboxes
 from .utils import filter_classes, prepare_data
 
 
-def kitti(anchor_boxes,
+def kitti(anchor_shapes,
+          anchor_grid_width,
+          anchor_grid_height,
           classes=None,
           image_width=None,
           image_height=None,
@@ -39,4 +41,5 @@ def kitti(anchor_boxes,
 
     return prepare_data(
         filter_classes(data.map(transform), classes, all_classes),
-        anchor_boxes, image_width, image_height, bgr_means)
+        anchor_shapes, anchor_grid_width, anchor_grid_height,
+        image_width, image_height, bgr_means)

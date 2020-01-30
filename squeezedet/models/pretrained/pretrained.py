@@ -21,3 +21,7 @@ def squeezedet_pretrained():
 
 def squeezedet_trained():
     return load_model('squeezedet_trained.h5')
+
+
+def squeezedet_better():
+    return load_model('squeezedet_better.h5')

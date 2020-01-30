@@ -5,14 +5,18 @@ from squeezedet.utils import denormalize_bboxes
 from .utils import filter_classes, prepare_data
 
 
-def voc2007(anchor_boxes,
+def voc2007(anchor_shapes,
+            anchor_grid_width,
+            anchor_grid_height,
             classes=None,
             image_width=None,
             image_height=None,
             bgr_means=(103.939, 116.779, 123.68),
             split=tfds.Split.TRAIN,
             data_dir=None):
-    return voc(anchor_boxes,
+    return voc(anchor_shapes,
+               anchor_grid_width,
+               anchor_grid_height,
                '2007',
                classes,
                image_width,
@@ -22,14 +26,18 @@ def voc2007(anchor_boxes,
                data_dir)
 
 
-def voc2012(anchor_boxes,
+def voc2012(anchor_shapes,
+            anchor_grid_width,
+            anchor_grid_height,
             classes=None,
             image_width=None,
             image_height=None,
             bgr_means=(103.939, 116.779, 123.68),
             split=tfds.Split.TRAIN,
             data_dir=None):
-    return voc(anchor_boxes,
+    return voc(anchor_shapes,
+               anchor_grid_width,
+               anchor_grid_height,
                '2012',
                classes,
                image_width,
@@ -39,7 +47,9 @@ def voc2012(anchor_boxes,
                data_dir)
 
 
-def voc(anchor_boxes,
+def voc(anchor_shapes,
+        anchor_grid_width,
+        anchor_grid_height,
         year='2007',
         classes=None,
         image_width=None,
@@ -69,4 +79,5 @@ def voc(anchor_boxes,
 
     return prepare_data(
         filter_classes(data.map(transform), classes, all_classes),
-        anchor_boxes, image_width, image_height, bgr_means)
+        anchor_shapes, anchor_grid_width, anchor_grid_height,
+        image_width, image_height, bgr_means)
