@@ -31,12 +31,14 @@ def load_weights(model, checkpoint_file):
 
 
 def main(_):
-    model = squeezedet(1, 9)
+    model = squeezedet(3, 9)
     model.predict(tf.random.normal((20, 384, 1248, 3)))
     print(model.layers)
 
-    load_weights(model, 'squeezedet/squeezenet_v1.1.pkl')
-    model.save('squeezedet_oneclass.h5')
+    # load_weights(model, '/Users/kimberninger/Downloads/squeezeDet-master/data/SqueezeNet/squeezenet_v1.1.pkl')
+    load_weights(model, '/Users/kimberninger/Downloads/squeezeDet-master/model.ckpt-87000.pkl')
+    # model.save('squeezenet_pretrained')
+    model.save('squeezenet_trained')
 
 
 if __name__ == '__main__':
