@@ -35,9 +35,8 @@ def main(_):
     model.predict(tf.random.normal((20, 384, 1248, 3)))
     print(model.layers)
 
-    # load_weights(model, '/Users/kimberninger/Downloads/squeezeDet-master/data/SqueezeNet/squeezenet_v1.1.pkl')
-    load_weights(model, '/Users/kimberninger/Downloads/squeezeDet-master/model.ckpt-87000.pkl')
-    # model.save('squeezenet_pretrained')
+    load_weights(model,
+        '/Users/kimberninger/Downloads/squeezeDet-master/model.ckpt-87000.pkl')
     model.save('squeezenet_trained')
 
 
