@@ -1,7 +1,4 @@
 import tensorflow as tf
-import tensorflow.keras as tfk
-import tensorflow.keras.layers as tfkl
-from layers import Fire
 from absl import app
 
 from squeezedet.models import squeezedet
@@ -35,7 +32,8 @@ def main(_):
     model.predict(tf.random.normal((20, 384, 1248, 3)))
     print(model.layers)
 
-    load_weights(model,
+    load_weights(
+        model,
         '/Users/kimberninger/Downloads/squeezeDet-master/model.ckpt-87000.pkl')
     model.save('squeezenet_trained')
 
