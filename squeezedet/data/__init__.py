@@ -1,11 +1,10 @@
-from .kitti import kitti
-from .voc import voc2007, voc2012
-from .utils import prepare_data, padded_batch
+from .datasets import kitti, voc
+from .data_utils import attach_anchors, resize_images, padded_batch
 
 __all__ = [
     'kitti',
-    'voc2007',
-    'voc2012',
-    'prepare_data',
+    'voc',
+    'attach_anchors',
+    'resize_images',
     'padded_batch'
 ]

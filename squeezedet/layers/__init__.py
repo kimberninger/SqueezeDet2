@@ -1,10 +1,9 @@
 from .fire import Fire
-from .boxes import GatherAnchors, ClipBoxes, BoxInterpretation, BoxFilter
+from .boxes import BoxFilter, BoxInterpretation, GatherAnchors
 
 __all__ = [
     'Fire',
-    'GatherAnchors',
-    'ClipBoxes',
     'BoxInterpretation',
-    'BoxFilter'
+    'BoxFilter',
+    'GatherAnchors'
 ]

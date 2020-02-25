@@ -1,8 +1,8 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 
-from squeezedet.utils import safe_exp, get_anchors
-from squeezedet.utils import normalize_bboxes, denormalize_bboxes
+from ..utils import get_anchors, safe_exp
+from ..utils import bbox_to_center_size, bbox_to_min_max
 
 
 class GatherAnchors(tfkl.Layer):
@@ -25,54 +25,40 @@ class GatherAnchors(tfkl.Layer):
 
 
 class ClipBoxes(tfkl.Layer):
-    def __init__(self, image_width, image_height, **kwargs):
+    def __init__(self, **kwargs):
         super(ClipBoxes, self).__init__(**kwargs)
-        self.image_width = image_width
-        self.image_height = image_height
 
     def call(self, inputs):
-        return denormalize_bboxes(
-            tf.clip_by_value(
-                normalize_bboxes(inputs, self.image_width, self.image_height),
-                0., 1.),
-            self.image_width, self.image_height)
+        return bbox_to_center_size(
+            tf.clip_by_value(bbox_to_min_max(inputs), 0., 1.))
 
     def get_config(self):
         config = super(ClipBoxes, self).get_config()
-        config.update({
-            'image_width': self.image_width,
-            'image_height': self.image_height
-        })
         return config
 
 
 class BoxInterpretation(tfkl.Layer):
-    def __init__(self, anchor_shapes, anchor_grid_width, anchor_grid_height,
-                 image_width, image_height,
+    def __init__(self, anchor_shapes, anchor_grid_height, anchor_grid_width,
                  exp_thresh=1.0, **kwargs):
         super(BoxInterpretation, self).__init__(**kwargs)
         self.anchor_shapes = anchor_shapes
-        self.anchor_grid_width = anchor_grid_width
         self.anchor_grid_height = anchor_grid_height
+        self.anchor_grid_width = anchor_grid_width
         self.exp_thresh = exp_thresh
-        self.image_width = image_width
-        self.image_height = image_height
 
     def build(self, input_shape):
-        self.clip = ClipBoxes(self.image_width, self.image_height)
+        self.clip = ClipBoxes()
         self.anchors = get_anchors(
             self.anchor_shapes,
-            self.anchor_grid_width,
             self.anchor_grid_height,
-            self.image_width,
-            self.image_height)
+            self.anchor_grid_width)
 
     def call(self, inputs):
         labels, confidence, deltas = inputs
 
         det_boxes = self.clip(tf.concat([
-            self.anchors[:, :2] + deltas[:, :, :2] * self.anchors[:, 2:],
-            self.anchors[:, 2:] * safe_exp(deltas[:, :, 2:], self.exp_thresh)
+            self.anchors[..., :2] + deltas[..., :2] * self.anchors[..., 2:],
+            self.anchors[..., 2:] * safe_exp(deltas[..., 2:], self.exp_thresh)
         ], axis=-1))
 
         probs = labels * confidence[..., tf.newaxis]
@@ -88,9 +74,7 @@ class BoxInterpretation(tfkl.Layer):
             'anchor_shapes': self.anchor_shapes,
             'anchor_grid_width': self.anchor_grid_width,
             'anchor_grid_height': self.anchor_grid_height,
-            'exp_thresh': self.exp_thresh,
-            'image_width': self.image_width,
-            'image_height': self.image_height
+            'exp_thresh': self.exp_thresh
         })
         return config
 
@@ -107,12 +91,11 @@ class BoxFilter(tfkl.Layer):
     def call(self, inputs):
         det_class, det_probs, det_boxes = inputs
 
-        order = tf.argsort(
-            det_probs, direction='DESCENDING')[:, :self.top_n_detection+1]
+        _, order = tf.math.top_k(det_probs, k=self.top_n_detection)
 
         boxes = tf.gather(det_boxes, order, batch_dims=1)
 
-        boxes = normalize_bboxes(boxes, 1.0, 1.0)
+        boxes = bbox_to_min_max(boxes)
 
         scores = tf.gather(det_probs, order, batch_dims=1)
         onehot = tf.one_hot(
@@ -136,14 +119,15 @@ class BoxFilter(tfkl.Layer):
         valid = result.valid_detections[..., tf.newaxis]
         valid_mask = tf.range(self.top_n_detection)[tf.newaxis] < valid
 
-        boxes = denormalize_bboxes(result.nmsed_boxes, 1.0, 1.0)
+        boxes = bbox_to_center_size(result.nmsed_boxes)
 
-        from absl import logging
-        logging.set_verbosity(logging.ERROR)
-        final_labels = tf.ragged.boolean_mask(result.nmsed_boxes, valid_mask)
-        final_probs = tf.ragged.boolean_mask(result.nmsed_scores, valid_mask)
-        final_boxes = tf.ragged.boolean_mask(boxes, valid_mask)
-        logging.set_verbosity(logging.INFO)
+        final_labels = tf.where(valid_mask, result.nmsed_classes, -1)
+        final_probs = tf.where(valid_mask, result.nmsed_scores, 0.0)
+
+        final_boxes = tf.where(
+            tf.tile(valid_mask[..., tf.newaxis], multiples=(1, 1, 4)),
+            boxes,
+            0.0)
 
         return tf.cast(final_labels, dtype=tf.int32), final_probs, final_boxes
 
