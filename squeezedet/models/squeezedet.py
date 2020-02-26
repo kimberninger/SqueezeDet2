@@ -20,8 +20,8 @@ def squeezedet(features, labels, mode, params, config):
     coef_class = params.get('loss_coefficient_class', 1.0)
 
     coef_conf = params.get('loss_coefficient_confidence', 1.0)
-    coef_conf_pos = params.get('loss_coefficient_confidence_positive', 75.0)
-    coef_conf_neg = params.get('loss_coefficient_confidence_negative', 100.0)
+    coef_conf_pos = params.get('loss_coefficient_confidence_positive', 3.75)
+    coef_conf_neg = params.get('loss_coefficient_confidence_negative', 5.0)
 
     coef_bbox = params.get('loss_coefficient_confidence_bounding_boxes', 5.0)
 
@@ -171,6 +171,22 @@ def squeezedet(features, labels, mode, params, config):
 
         train_op = tf.group(minimize_op, *update_ops)
 
+    precision = AveragePrecision(
+        num_classes=len(params['classes']),
+        iou_threshold=iou_threshold)
+
+    recall = AverageRecall(
+        num_classes=len(params['classes']),
+        iou_threshold=iou_threshold)
+
+    precision.update_state(
+        labels['bboxes'], labels['labels'],
+        final_boxes, final_classes, final_probs)
+
+    recall.update_state(
+        labels['bboxes'], labels['labels'],
+        final_boxes, final_classes, final_probs)
+
     return tf.estimator.EstimatorSpec(
         mode=mode,
         predictions={
@@ -184,10 +200,6 @@ def squeezedet(features, labels, mode, params, config):
         loss=total_loss,
         train_op=train_op,
         eval_metric_ops={
-            'precision': AveragePrecision(
-                num_classes=len(params['classes']),
-                iou_threshold=iou_threshold),
-            'recall': AverageRecall(
-                num_classes=len(params['classes']),
-                iou_threshold=iou_threshold)
+            'precision': precision,
+            'recall': recall
         })

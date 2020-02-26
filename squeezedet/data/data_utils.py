@@ -64,26 +64,27 @@ def filter_classes(data, all_classes, classes=None):
     if classes is None:
         return data
 
-    m = tf.math.equal(
-        tf.strings.lower(all_classes),
-        tf.strings.lower(classes)[:, tf.newaxis])
-
-    relevant_labels = tf.math.reduce_any(m, axis=0)
-
-    # label_indices = tf.math.reduce_sum(
-    #     tf.cast(m, dtype=tf.int32) * tf.range(tf.shape(classes)[0]), axis=-1)
-    label_indices = tf.scatter_nd(
-        tf.where(m)[:, 1:],
-        tf.range(len(classes)),
-        (len(all_classes),))
-
     def transform(inputs, outputs):
-        mask = tf.gather(relevant_labels, outputs['labels'])
-        outputs['labels'] = tf.gather(label_indices, outputs['labels'])[mask]
-        outputs['bboxes'] = outputs['bboxes'][mask]
+        mapping = tf.math.equal(
+            tf.reshape(tf.strings.lower(all_classes), shape=(1, 1, -1)),
+            tf.reshape(tf.strings.lower(classes), shape=(1, -1, 1)))
+
+        mask = tf.math.logical_and(
+            tf.one_hot(
+                outputs['labels'],
+                depth=len(all_classes),
+                off_value=False,
+                on_value=True)[:, tf.newaxis, :],
+            mapping)
+
+        outputs['labels'] = tf.cast(tf.where(mask)[:, 1], dtype=tf.int32)
+        outputs['bboxes'] = tf.boolean_mask(
+            outputs['bboxes'],
+            tf.math.reduce_any(tf.math.reduce_any(mask, axis=-1), axis=-1))
+
         return inputs, outputs
 
-    return data  # .map(transform)
+    return data.map(transform)
 
 
 def padded_batch(data, batch_size):
